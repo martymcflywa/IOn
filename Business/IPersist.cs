@@ -4,7 +4,7 @@ namespace Business
 {
     public interface IPersist
     {
-        IEnumerable<IEvent> Read();
-        void Write(IEnumerable<IEvent> events);
+        void Write(IEnumerable<IEvent> events, string path, int maxSize);
+        IEnumerable<IEvent> Read(string path);
     }
 }
