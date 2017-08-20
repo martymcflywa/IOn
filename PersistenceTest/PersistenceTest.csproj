@@ -14,5 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\Business\Business.csproj" />
+    <ProjectReference Include="..\EventSource\EventSource.csproj" />
   </ItemGroup>
 </Project>
