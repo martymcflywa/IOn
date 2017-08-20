@@ -12,17 +12,17 @@ namespace EventSourceTest
         [Fact]
         public void Get_HasContent()
         {
-            var limit = 200;
+            const int limit = 200;
             var generator = new EventGenerator();
-            var actual = generator.Get(limit);
+            var actual = generator.Get(limit).ToList();
             Assert.NotEmpty(actual);
-            Assert.Equal(limit, actual.ToList().Count);
+            Assert.Equal(limit, actual.Count);
         }
 
         [Fact]
         public void Get_VerifySequenceId()
         {
-            var limit = 200;
+            const int limit = 200;
             var generator = new EventGenerator();
             var actual = generator.Get(limit);
 
@@ -36,27 +36,20 @@ namespace EventSourceTest
         [Fact]
         public void Get_VerifyAggregateTypeId()
         {
-            var limit = 200;
+            const int limit = 200;
             var generator = new EventGenerator();
             var actual = generator.Get(limit);
 
             actual.AsParallel().ForAll(e =>
             {
-                if (e.GetType() == typeof(CustomerCreatedEvent))
-                {
-                    Assert.Equal(11, e.AggregateTypeId);
-                }
-                else
-                {
-                    Assert.Equal(12, e.AggregateTypeId);
-                }
+                Assert.Equal(e.GetType() == typeof(CustomerCreatedEvent) ? 11 : 12, e.AggregateTypeId);
             });
         }
 
         [Fact]
         public void Get_VerifyMessageTypeId()
         {
-            var limit = 200;
+            const int limit = 200;
             var generator = new EventGenerator();
             var actual = generator.Get(limit);
 
@@ -79,7 +72,7 @@ namespace EventSourceTest
         [Fact]
         public void Get_VerifyTimestamp()
         {
-            var limit = 200;
+            const int limit = 200;
             var generator = new EventGenerator();
             var actual = generator.Get(limit);
             var now = DateTimeOffset.Now;
