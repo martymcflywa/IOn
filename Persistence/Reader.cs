@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Business;
 
 namespace Persistence
@@ -9,7 +10,6 @@ namespace Persistence
     {
         private FileStream Stream;
         private readonly Dictionary<EventKey, Func<long, short, short, long, object>> _deserializeRegister;
-        private int Cursor;
 
         public Reader()
         {
@@ -34,7 +34,7 @@ namespace Persistence
             _deserializeRegister.Add(new EventKey(aggregateTypeId, messageTypeId), (s, a, m, t) => deserializeHandler(s, a, m, t));
         }
 
-        public IEnumerable<IEvent> Deserialize(string path)
+        public IEnumerable<IEvent> Read(string path)
         {
             if (!Directory.Exists(path))
             {
@@ -47,39 +47,34 @@ namespace Persistence
                 throw new FileNotFoundException(path);
             }
 
-            Stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            Cursor = 0;
             foreach (var file in files)
             {
-                Cursor = 0;
-                yield return Read(file, Stream);
+                Stream = new FileStream(file, FileMode.Open, FileAccess.Read);
+                var bytesLeft = Stream.Length;
+                while (bytesLeft > 0)
+                {
+                    var sequenceIdBytes = new byte[8];
+                    bytesLeft -= Stream.Read(sequenceIdBytes, 0, sequenceIdBytes.Length);
+                    var sequenceId = BitConverter.ToInt64(sequenceIdBytes, 0);
+
+                    var aggregateTypeIdBytes = new byte[2];
+                    bytesLeft -= Stream.Read(aggregateTypeIdBytes, 0, aggregateTypeIdBytes.Length);
+                    var aggregateTypeId = BitConverter.ToInt16(aggregateTypeIdBytes, 0);
+
+                    var messageTypeIdBytes = new byte[2];
+                    bytesLeft -= Stream.Read(messageTypeIdBytes, 0, messageTypeIdBytes.Length);
+                    var messageTypeId = BitConverter.ToInt16(messageTypeIdBytes, 0);
+
+                    var timestampBytes = new byte[8];
+                    bytesLeft -= Stream.Read(timestampBytes, 0, timestampBytes.Length);
+                    var timestamp = BitConverter.ToInt64(timestampBytes, 0);
+
+                    Stream.Flush();
+
+                    var deserialize = _deserializeRegister[new EventKey(aggregateTypeId, messageTypeId)];
+                    yield return (IEvent)deserialize(sequenceId, aggregateTypeId, messageTypeId, timestamp);
+                }
             }
-        }
-
-        private IEvent Read(string file, FileStream stream)
-        {
-            // TODO: set file to stream, do i need to init stream again here?
-            var sequenceIdBytes = new byte[8];
-            stream.Read(sequenceIdBytes, Cursor, sequenceIdBytes.Length);
-            var sequenceId = BitConverter.ToInt64(sequenceIdBytes, 0);
-            Cursor += sequenceIdBytes.Length;
-
-            var aggregateTypeIdBytes = new byte[2];
-            stream.Read(aggregateTypeIdBytes, Cursor, aggregateTypeIdBytes.Length);
-            var aggregateTypeId = BitConverter.ToInt16(sequenceIdBytes, 0);
-            Cursor += aggregateTypeIdBytes.Length;
-
-            var messageTypeIdBytes = new byte[2];
-            stream.Read(messageTypeIdBytes, Cursor, messageTypeIdBytes.Length);
-            var messageTypeId = BitConverter.ToInt16(messageTypeIdBytes, 0);
-            Cursor += messageTypeIdBytes.Length;
-
-            var timestampBytes = new byte[8];
-            stream.Read(timestampBytes, Cursor, timestampBytes.Length);
-            var timestamp = BitConverter.ToInt64(timestampBytes, 0);
-
-            var deserialize = _deserializeRegister[new EventKey(aggregateTypeId, messageTypeId)];
-            return (IEvent)deserialize(sequenceId, aggregateTypeId, messageTypeId, timestamp);
         }
 
         private IEvent DeserializeCustomerCreatedEvent(long sequenceId, short aggregateTypeId, short messageTypeId, long timestamp)

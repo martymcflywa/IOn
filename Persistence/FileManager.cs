@@ -7,9 +7,6 @@ namespace Persistence
 {
     public class FileManager : IPersist
     {
-        private string Path;
-        private int MaxSize;
-
         public void Write(IEnumerable<IEvent> events, string path, int maxSize)
         {
             using (var writer = new Writer())
@@ -20,7 +17,10 @@ namespace Persistence
 
         public IEnumerable<IEvent> Read(string path)
         {
-            throw new NotImplementedException();
+            using (var reader = new Reader())
+            {
+                return reader.Read(path);
+            }
         }
     }
 }
