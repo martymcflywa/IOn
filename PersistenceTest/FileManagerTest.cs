@@ -41,7 +41,7 @@ namespace PersistenceTest
             var limit = 5;
             var maxSize = 1000;
             var generator = new EventGenerator();
-            var expected = generator.Get(limit);
+            var expected = generator.Get(limit).ToList();
             var path = Path.Combine(Directory.GetCurrentDirectory(), "test");
             var fileManager = new FileManager();
             fileManager.Write(expected, path, maxSize);

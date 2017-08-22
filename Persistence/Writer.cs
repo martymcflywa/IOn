@@ -23,6 +23,7 @@ namespace Persistence
 
             foreach (var e in events)
             {
+                // TODO: do using here
                 if (IsNewFile(_stream))
                 {
                     _stream = CreateNewFile();
@@ -53,11 +54,10 @@ namespace Persistence
             _fileCount++;
             var filepath = GetFilepath(FilenameFormat + Extension, Padding);
 
+            // TODO: use using instead
             _stream?.Dispose();
-            if (!Directory.Exists(_path))
-            {
-                Directory.CreateDirectory(_path);
-            }
+            Directory.CreateDirectory(_path);
+
             return new FileStream(filepath, FileMode.CreateNew);
         }
 
