@@ -17,10 +17,8 @@ namespace Persistence
 
         public IEnumerable<IEvent> Read(string path)
         {
-            using (var reader = new Reader())
-            {
-                return reader.Read(path);
-            }
+            var reader = new Reader();
+            return reader.Read(path);
         }
     }
 }

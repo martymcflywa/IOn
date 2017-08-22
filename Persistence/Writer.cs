@@ -7,31 +7,31 @@ namespace Persistence
 {
     public class Writer : IDisposable
     {
-        private string Path;
-        private int MaxSize;
-        private int FileCount;
-        private FileStream Stream;
+        private string _path;
+        private int _maxSize;
+        private int _fileCount;
+        private FileStream _stream;
 
-        private const string FILENAME_FORMAT = "Records_{0}";
-        private const string EXTENSION = ".dat";
-        private const string PADDING = "D3";
+        private const string FilenameFormat = "Records_{0}";
+        private const string Extension = ".dat";
+        private const string Padding = "D3";
 
         public void Write(IEnumerable<IEvent> events, string path, int maxSize)
         {
-            Path = path;
-            MaxSize = maxSize;
+            _path = path;
+            _maxSize = maxSize;
 
             foreach (var e in events)
             {
-                if (IsNewFile(Stream))
+                if (IsNewFile(_stream))
                 {
-                    Stream = CreateNewFile();
+                    _stream = CreateNewFile();
                 }
-                Write(e, Stream);
+                Write(e, _stream);
             }
         }
 
-        private void Write(IEvent e, FileStream stream)
+        private static void Write(IEvent e, Stream stream)
         {
             var sequenceIdBytes = BitConverter.GetBytes(e.SequenceId);
             stream.Write(sequenceIdBytes, 0, sequenceIdBytes.Length);
@@ -50,32 +50,33 @@ namespace Persistence
 
         private FileStream CreateNewFile()
         {
-            FileCount++;
-            var filepath = GetFilepath(FILENAME_FORMAT + EXTENSION, PADDING);
+            _fileCount++;
+            var filepath = GetFilepath(FilenameFormat + Extension, Padding);
 
-            if (!Directory.Exists(Path))
+            _stream?.Dispose();
+            if (!Directory.Exists(_path))
             {
-                Directory.CreateDirectory(Path);
+                Directory.CreateDirectory(_path);
             }
             return new FileStream(filepath, FileMode.CreateNew);
         }
 
         private string GetFilepath(string filenameFormat, string padding)
         {
-            return System.IO.Path.Combine(Path, String.Format(filenameFormat, FileCount.ToString(padding)));
+            return System.IO.Path.Combine(_path, string.Format(filenameFormat, _fileCount.ToString(padding)));
         }
 
-        private bool IsNewFile(FileStream stream)
+        private bool IsNewFile(Stream stream)
         {
-            return stream == null || stream.Length > MaxSize;
+            return stream == null || stream.Length > _maxSize;
         }
 
         public void Dispose()
         {
-            if (Stream != null)
+            if (_stream != null)
             {
-                Stream.Dispose();
-                Stream = null;
+                _stream.Dispose();
+                _stream = null;
             }
         }
     }

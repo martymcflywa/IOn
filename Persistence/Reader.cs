@@ -6,9 +6,8 @@ using Business;
 
 namespace Persistence
 {
-    public class Reader : IDeserializeRegister, IDisposable
+    public class Reader : IDeserializeRegister
     {
-        private FileStream Stream;
         private readonly Dictionary<EventKey, Func<long, short, short, long, object>> _deserializeRegister;
 
         public Reader()
@@ -49,30 +48,30 @@ namespace Persistence
 
             foreach (var file in files)
             {
-                Stream = new FileStream(file, FileMode.Open, FileAccess.Read);
-                var bytesLeft = Stream.Length;
-                while (bytesLeft > 0)
+                using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                 {
-                    var sequenceIdBytes = new byte[8];
-                    bytesLeft -= Stream.Read(sequenceIdBytes, 0, sequenceIdBytes.Length);
-                    var sequenceId = BitConverter.ToInt64(sequenceIdBytes, 0);
+                    var bytesLeft = fs.Length;
+                    while (bytesLeft > 0)
+                    {
+                        var sequenceIdBytes = new byte[8];
+                        bytesLeft -= fs.Read(sequenceIdBytes, 0, sequenceIdBytes.Length);
+                        var sequenceId = BitConverter.ToInt64(sequenceIdBytes, 0);
 
-                    var aggregateTypeIdBytes = new byte[2];
-                    bytesLeft -= Stream.Read(aggregateTypeIdBytes, 0, aggregateTypeIdBytes.Length);
-                    var aggregateTypeId = BitConverter.ToInt16(aggregateTypeIdBytes, 0);
+                        var aggregateTypeIdBytes = new byte[2];
+                        bytesLeft -= fs.Read(aggregateTypeIdBytes, 0, aggregateTypeIdBytes.Length);
+                        var aggregateTypeId = BitConverter.ToInt16(aggregateTypeIdBytes, 0);
 
-                    var messageTypeIdBytes = new byte[2];
-                    bytesLeft -= Stream.Read(messageTypeIdBytes, 0, messageTypeIdBytes.Length);
-                    var messageTypeId = BitConverter.ToInt16(messageTypeIdBytes, 0);
+                        var messageTypeIdBytes = new byte[2];
+                        bytesLeft -= fs.Read(messageTypeIdBytes, 0, messageTypeIdBytes.Length);
+                        var messageTypeId = BitConverter.ToInt16(messageTypeIdBytes, 0);
 
-                    var timestampBytes = new byte[8];
-                    bytesLeft -= Stream.Read(timestampBytes, 0, timestampBytes.Length);
-                    var timestamp = BitConverter.ToInt64(timestampBytes, 0);
+                        var timestampBytes = new byte[8];
+                        bytesLeft -= fs.Read(timestampBytes, 0, timestampBytes.Length);
+                        var timestamp = BitConverter.ToInt64(timestampBytes, 0);
 
-                    Stream.Flush();
-
-                    var deserialize = _deserializeRegister[new EventKey(aggregateTypeId, messageTypeId)];
-                    yield return (IEvent)deserialize(sequenceId, aggregateTypeId, messageTypeId, timestamp);
+                        var deserialize = _deserializeRegister[new EventKey(aggregateTypeId, messageTypeId)];
+                        yield return (IEvent)deserialize(sequenceId, aggregateTypeId, messageTypeId, timestamp);
+                    }
                 }
             }
         }
@@ -97,15 +96,6 @@ namespace Persistence
                 MessageTypeId = messageTypeId,
                 Timestamp = timestamp
             };
-        }
-
-        public void Dispose()
-        {
-            if (Stream != null)
-            {
-                Stream.Dispose();
-                Stream = null;
-            }
         }
     }
 }
